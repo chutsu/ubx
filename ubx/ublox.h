@@ -271,7 +271,7 @@ int ip_port_info(const int sockfd, char *ip, int *port) {
     *port = ntohs(s->sin6_port);
     inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
   }
-	strcpy(ip, ipstr);
+  strcpy(ip, ipstr);
   /* ip = std::string{ipstr}; */
 
   return 0;
@@ -282,11 +282,11 @@ int ip_port_info(const int sockfd, char *ip, int *port) {
  ****************************************************************************/
 
 typedef struct uart_t {
-	int connected;
-	int connfd;
+  int connected;
+  int connfd;
 
-	char port[100];
-	int speed;
+  char port[100];
+  int speed;
   int parity;
 } uart_t;
 

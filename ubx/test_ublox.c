@@ -157,7 +157,7 @@ int test_ublox_version() {
 
   if (ublox_connect(ublox) != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
+    return -1;
   }
 
   ublox_version(ublox);
@@ -291,11 +291,11 @@ void test_suite() {
   MU_ADD_TEST(test_ubx_parser_reset);
   MU_ADD_TEST(test_ubx_parser_update);
 
-	/* MU_ADD_TEST(test_ublox_version); */
-	/* MU_ADD_TEST(test_ubx_val_set_and_get); */
-	/* MU_ADD_TEST(test_ublox_parse_rtcm3); */
-	/* MU_ADD_TEST(test_ublox_base); */
-	/* MU_ADD_TEST(test_ublox_rover); */
+  /* MU_ADD_TEST(test_ublox_version); */
+  /* MU_ADD_TEST(test_ubx_val_set_and_get); */
+  /* MU_ADD_TEST(test_ublox_parse_rtcm3); */
+  /* MU_ADD_TEST(test_ublox_base); */
+  /* MU_ADD_TEST(test_ublox_rover); */
 }
 
 MU_RUN_TESTS(test_suite);
