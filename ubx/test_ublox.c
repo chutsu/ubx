@@ -1,5 +1,12 @@
+#include <signal.h>
+
 #include "munit.h"
 #include "ubx.h"
+
+int loop = 1;
+static void signal_handler(int sig) {
+  loop = 0;
+}
 
 /*****************************************************************************
  * UBX Message
@@ -199,7 +206,7 @@ int test_ublox_version() {
   return 0;
 }
 
-int test_ubx_val_set_and_get() {
+int test_ubx_set_and_get() {
   /* Setup UART connection to UBlox */
 	uart_t uart;
 	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
@@ -217,12 +224,12 @@ int test_ubx_val_set_and_get() {
   uint32_t key = CFG_MSGOUT_RTCM_3X_TYPE1005_USB;
   uint32_t val = 1;
   uint8_t val_size = 1;
-  ubx_val_set(&ublox, 1, key, val, val_size);
+  ubx_set(&ublox, 1, key, val, val_size);
 
 	ublox_reset(&ublox);
 
   uint32_t value = 0;
-  ubx_val_get(&ublox, 0, key, &value);
+  ubx_get(&ublox, 0, key, &value);
   MU_CHECK(value == val);
 
 	/* Clean up */
@@ -241,8 +248,8 @@ int test_ublox_parse_rtcm3() {
 	}
 
   /* Setup UBlox */
-  ublox_t base;
-  if (ublox_init(&base, &uart) != 0) {
+  ublox_t ublox;
+  if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to setup ublox!");
 		return -1;
   }
@@ -305,16 +312,15 @@ int test_ublox_parse_rtcm3() {
   };
   // clang-format on
 
-  for (int i = 0; i < 129 + 25 + 176 + 14 + 201; i++) {
-    if (ublox_parse_rtcm3(&base, data[i])) {
-      MU_CHECK(base.rtcm3_parser.buf_pos == 0);
-      MU_CHECK(base.rtcm3_parser.msg_len == 0);
-      MU_CHECK(strlen(base.msg_type) == 0);
+  for (int i = 0; i < 25 + 129 + 201 + 176 + 14; i++) {
+    if (ublox_parse_rtcm3(&ublox, data[i])) {
+      MU_CHECK(ublox.rtcm3_parser.buf_pos == 0);
+      MU_CHECK(ublox.rtcm3_parser.msg_len == 0);
     }
   }
 
 	/* Clean up */
-	ublox_disconnect(&base);
+	ublox_disconnect(&ublox);
 	sleep(1);
 
   return 0;
@@ -336,12 +342,8 @@ int test_ublox_run() {
   }
 
 	/* Configure and run Ublox in GPS mode */
-  ublox_gps_config(&ublox);
-  ublox_run(&ublox);
-
-	/* Clean up */
-	ublox_disconnect(&ublox);
-	sleep(1);
+	loop = 1;
+  ublox_run(&ublox, &loop);
 
   return 0;
 }
@@ -362,7 +364,8 @@ int test_ublox_base() {
   }
 
 	/* Run base station */
-  ublox_base_station_run(&base, 1234);
+	loop = 1;
+  ublox_base_run(&base, 1234, &loop);
 
   return 0;
 }
@@ -382,12 +385,18 @@ int test_ublox_rover() {
 		return -1;
   }
 
-  /* ublox_rover_run(&rover); */
+	/* Run rover */
+  char *ip = "127.0.0.1";
+  int port = 1234;
+  loop = 1;
+  ublox_rover_run(&rover, ip, port, &loop);
 
   return 0;
 }
 
 void test_suite() {
+  signal(SIGINT, signal_handler);
+
   MU_ADD_TEST(test_ubx_msg_init);
   MU_ADD_TEST(test_ubx_msg_checksum);
   MU_ADD_TEST(test_ubx_msg_is_valid);
@@ -401,7 +410,7 @@ void test_suite() {
 
 	MU_ADD_TEST(test_ublox_init);
 	MU_ADD_TEST(test_ublox_version);
-	MU_ADD_TEST(test_ubx_val_set_and_get);
+	MU_ADD_TEST(test_ubx_set_and_get);
 	MU_ADD_TEST(test_ublox_parse_rtcm3);
 	MU_ADD_TEST(test_ublox_run);
 	/* MU_ADD_TEST(test_ublox_base); */

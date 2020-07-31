@@ -209,12 +209,12 @@
 #define DEBUG(M, ...)
 #else
 #define DEBUG(M, ...)                                                          \
-    fprintf(stderr, "[DEBUG] %s:%d: " M "\n", __func__, __LINE__, ##__VA_ARGS__)
+  fprintf(stderr, "[DEBUG] %s:%d: " M "\n", __func__, __LINE__, ##__VA_ARGS__)
 #endif
 
 /* LOG */
 #define LOG_ERROR(M, ...)                                                      \
-    fprintf(stderr, "[ERROR] [%s] " M "\n", __func__, ##__VA_ARGS__)
+  fprintf(stderr, "[ERROR] [%s] " M "\n", __func__, ##__VA_ARGS__)
 #define LOG_WARN(M, ...) fprintf(stderr, "[WARN] " M "\n", ##__VA_ARGS__)
 #define LOG_INFO(M, ...) fprintf(stderr, "[INFO] " M "\n", ##__VA_ARGS__)
 
@@ -1137,7 +1137,6 @@ typedef struct ublox_t {
   int conns[UBLOX_MAX_CONNS];
   size_t nb_conns;
 
-	char msg_type[100];
   ubx_parser_t ubx_parser;
   rtcm3_parser_t rtcm3_parser;
 
@@ -1169,7 +1168,6 @@ int ublox_init(ublox_t *ublox, uart_t *uart) {
   ublox->nb_conns = 0;
 
   /* Parsers */
-	memset(ublox->msg_type, 0, strlen(ublox->msg_type));
   ubx_parser_init(&ublox->ubx_parser);
   rtcm3_parser_init(&ublox->rtcm3_parser);
 
@@ -1239,6 +1237,7 @@ int ubx_poll(const ublox_t *ublox,
              const int retry) {
   int attempts = 0;
   ubx_parser_t parser;
+  ubx_parser_init(&parser);
 
 request:
   /* Request */
@@ -1317,6 +1316,7 @@ int ubx_read_ack(const ublox_t *ublox,
                  const uint8_t msg_class,
                  const uint8_t msg_id) {
   ubx_parser_t parser;
+  ubx_parser_init(&parser);
 
   /* Get Ack */
   int counter = 0; /* Arbitrary counter for timeout */
@@ -1349,10 +1349,10 @@ int ubx_read_ack(const ublox_t *ublox,
   return (parser.msg.msg_id == UBX_ACK_ACK) ? 0 : -1;
 }
 
-int ubx_val_get(const ublox_t *ublox,
-                const uint8_t layer,
-                const uint32_t key,
-                uint32_t *val) {
+int ubx_get(const ublox_t *ublox,
+            const uint8_t layer,
+            const uint32_t key,
+            uint32_t *val) {
   /* Build message */
   uint16_t payload_len = 4 + 4;
   uint8_t payload[1024] = {0};
@@ -1372,15 +1372,12 @@ int ubx_val_get(const ublox_t *ublox,
   return 0;
 }
 
-int ubx_val_set(const ublox_t *ublox,
-                const uint8_t layer,
-                const uint32_t key,
-                const uint32_t val,
-                const uint8_t val_size) {
-  const uint32_t bit_masks[4] = {0x000000FF,
-                                 0x0000FF00,
-                                 0x00FF0000,
-                                 0xFF000000};
+int ubx_set(const ublox_t *ublox,
+            const uint8_t layer,
+            const uint32_t key,
+            const uint32_t val,
+            const uint8_t val_size) {
+  uint32_t bit_masks[4] = {0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000};
 
   /* Build message */
   uint16_t payload_length = 4 + 4 + val_size;
@@ -1414,7 +1411,14 @@ retry:
   case -1:
   default: LOG_ERROR("Failed to set configuration!"); return -1;
   }
+
 }
+
+/*****************************************************************************
+ * Ublox
+ ****************************************************************************/
+
+/****************************** Ublox GPS Mode ******************************/
 
 void ublox_version(const ublox_t *ublox) {
   uint16_t length = 0;
@@ -1444,6 +1448,60 @@ int ublox_parse_ubx(ublox_t *ublox, uint8_t data) {
 
   return 0;
 }
+
+int ublox_gps_config(ublox_t *ublox) {
+  /* Configure ublox */
+  const uint8_t layer = 1; /* RAM */
+  int retval = 0;
+  retval += ubx_set(ublox, layer, CFG_RATE_MEAS, 100, 2); /* 100ms = 10Hz */
+  retval += ubx_set(ublox, layer, CFG_USBOUTPROT_NMEA, 0, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_MON_RF_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 1, 1);
+  retval += ubx_set(ublox, layer, CFG_TMODE_MODE, 0, 1);
+  retval += ubx_set(ublox, layer, CFG_NAVSPG_DYNMODEL, 6, 1);
+  if (retval != 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+int ublox_run(ublox_t *ublox, int *loop) {
+  /* Configure GPS mode */
+  if (ublox_gps_config(ublox) != 0) {
+    LOG_ERROR("Failed to configure Ublox into GPS mode!");
+    return -1;
+  }
+
+  /* Setup poll file descriptors */
+  const int timeout = 1; /* 1ms */
+  struct pollfd fds[1];
+  fds[0].fd = ublox->uart->connfd;
+  fds[0].events = POLLIN;
+
+  /* Poll */
+  while (poll(fds, 1, timeout) >= 0 && *loop == 1) {
+    /* Read byte from UART and parse */
+    if (fds[0].revents & POLLIN) {
+      uint8_t data = 0;
+      if (uart_read(ublox->uart, &data, 1) != 0) {
+        continue;
+      }
+      ublox_parse_ubx(ublox, data);
+    }
+  }
+}
+
+/**************************** Ublox Base Station ****************************/
 
 void ublox_broadcast_rtcm3(ublox_t *ublox) {
   const uint8_t *msg_data = ublox->rtcm3_parser.buf_data;
@@ -1478,7 +1536,7 @@ void ublox_broadcast_rtcm3(ublox_t *ublox) {
 }
 
 int ublox_parse_rtcm3(ublox_t *ublox, uint8_t data) {
-  if (rtcm3_parser_update(&ublox->rtcm3_parser, data)) {
+  if (rtcm3_parser_update(&ublox->rtcm3_parser, data) == 1) {
     /* Debug */
     DEBUG("[RTCM3]\tmsg type: %zu\tmsg length: %zu",
           ublox->rtcm3_parser.msg_type,
@@ -1499,89 +1557,32 @@ int ublox_parse_rtcm3(ublox_t *ublox, uint8_t data) {
   return 0;
 }
 
-/*****************************************************************************
- * Ublox GPS mode
- ****************************************************************************/
-
-int ublox_gps_config(ublox_t *ublox) {
-  /* Configure ublox */
-  const uint8_t layer = 1; /* RAM */
-  int retval = 0;
-  retval += ubx_val_set(ublox, layer, CFG_RATE_MEAS, 100, 2); /* 100ms = 10Hz */
-  retval += ubx_val_set(ublox, layer, CFG_USBOUTPROT_NMEA, 0, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_MON_RF_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 1, 1);
-  retval += ubx_val_set(ublox, layer, CFG_TMODE_MODE, 0, 1);
-  retval += ubx_val_set(ublox, layer, CFG_NAVSPG_DYNMODEL, 6, 1);
-  if (retval != 0) {
-    return -1;
-  }
-
-  return 0;
-}
-
-void ublox_run(ublox_t *ublox) {
-  const int timeout = 1; /* 1ms */
-
-  /* Setup poll file descriptors */
-  struct pollfd fds[1];
-  fds[0].fd = ublox->uart->connfd;
-  fds[0].events = POLLIN;
-
-  /* Poll */
-  while (poll(fds, 1, timeout) >= 0) {
-    /* Read byte from UART and parse */
-    if (fds[0].revents & POLLIN) {
-      uint8_t data = 0;
-      if (uart_read(ublox->uart, &data, 1) != 0) {
-        continue;
-      }
-      ublox_parse_ubx(ublox, data);
-    }
-  }
-}
-
-/*****************************************************************************
- * Ublox RTK-GPS mode
- ****************************************************************************/
-
-/**************************** Ublox Base Station ****************************/
-
 int ublox_base_station_config(ublox_t *base) {
   const uint8_t layer = 1; /* RAM */
   /* const uint8_t layer = 2; #<{(| BBR |)}># */
   int retval = 0;
-  retval += ubx_val_set(base, layer, CFG_RATE_MEAS, 1000, 2); /* 1000ms = 1Hz */
-  retval += ubx_val_set(base, layer, CFG_USBOUTPROT_NMEA, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1005_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1077_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1087_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1097_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1127_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1230_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_MON_RF_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 0, 1);
-  retval += ubx_val_set(base, layer, CFG_TMODE_MODE, 1, 1);
-  retval += ubx_val_set(base, layer, CFG_TMODE_SVIN_MIN_DUR, 60, 4);
-  retval += ubx_val_set(base, layer, CFG_TMODE_SVIN_ACC_LIMIT, 50000, 4);
+  retval += ubx_set(base, layer, CFG_RATE_MEAS, 1000, 2); /* 1000ms = 1Hz */
+  retval += ubx_set(base, layer, CFG_USBOUTPROT_NMEA, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1005_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1077_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1087_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1097_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1127_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_RTCM_3X_TYPE1230_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_MON_RF_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 0, 1);
+  retval += ubx_set(base, layer, CFG_TMODE_MODE, 1, 1);
+  retval += ubx_set(base, layer, CFG_TMODE_SVIN_MIN_DUR, 60, 4);
+  retval += ubx_set(base, layer, CFG_TMODE_SVIN_ACC_LIMIT, 50000, 4);
   if (retval != 0) {
     LOG_ERROR("Failed to configure Ublox into BASE_STATION mode!");
     return -1;
@@ -1592,44 +1593,7 @@ int ublox_base_station_config(ublox_t *base) {
   return 0;
 }
 
-void ublox_base_station_loop(ublox_t *base) {
-  while (1) {
-    /* Accept the data packet from client and verification */
-    struct sockaddr_in client;
-    socklen_t len = sizeof(client);
-    const int connfd = accept(base->sockfd, (struct sockaddr *) &client, &len);
-    if (connfd >= 0) {
-      char ip[INET6_ADDRSTRLEN] = {0};
-      int port = 0;
-      ip_port_info(connfd, ip, &port);
-      LOG_INFO("Server connected with UBlox client [%s:%d]", ip, port);
-
-      base->conns[base->nb_conns] = connfd;
-      base->nb_conns++;
-    }
-
-    /* Read byte */
-    uint8_t data = 0;
-    if (uart_read(base->uart, &data, 1) != 0) {
-      continue;
-    }
-
-    /* Parse data */
-    switch (base->state) {
-    case UBLOX_READY:
-      if (data == 0xB5) {
-        base->state = UBLOX_PARSING_UBX;
-      } else if (data == 0xD3) {
-        base->state = UBLOX_PARSING_RTCM3;
-      }
-      break;
-    case UBLOX_PARSING_UBX: ublox_parse_ubx(base, data); break;
-    case UBLOX_PARSING_RTCM3: ublox_parse_rtcm3(base, data); break;
-    }
-  }
-}
-
-int ublox_base_station_run(ublox_t *base, const int port) {
+int ublox_base_run(ublox_t *base, const int port, int *loop) {
   /* Configure base station */
   if (ublox_base_station_config(base) != 0) {
     LOG_ERROR("Failed to configure Ublox into BASE_STATION mode!");
@@ -1685,11 +1649,43 @@ int ublox_base_station_run(ublox_t *base, const int port) {
   }
 
   /* Obtain RTCM3 Messages from receiver and transmit them to rover */
-  ublox_base_station_loop(base);
+  while (*loop) {
+    /* Accept the data packet from client and verification */
+    struct sockaddr_in client;
+    socklen_t len = sizeof(client);
+    int connfd = accept(base->sockfd, (struct sockaddr *) &client, &len);
+    if (connfd >= 0) {
+      char ip[INET6_ADDRSTRLEN] = {0};
+      int port = 0;
+      ip_port_info(connfd, ip, &port);
+      LOG_INFO("Server connected with UBlox client [%s:%d]", ip, port);
+
+      base->conns[base->nb_conns] = connfd;
+      base->nb_conns++;
+    }
+
+    /* Read byte */
+    uint8_t data = 0;
+    if (uart_read(base->uart, &data, 1) != 0) {
+      continue;
+    }
+
+    /* Parse data */
+    switch (base->state) {
+    case UBLOX_READY:
+      if (data == 0xB5) {
+        base->state = UBLOX_PARSING_UBX;
+      } else if (data == 0xD3) {
+        base->state = UBLOX_PARSING_RTCM3;
+      }
+      break;
+    case UBLOX_PARSING_UBX: ublox_parse_ubx(base, data); break;
+    case UBLOX_PARSING_RTCM3: ublox_parse_rtcm3(base, data); break;
+    }
+  }
 
   /* Clean up */
-  close(base->sockfd);
-  base->sockfd = -1;
+  ublox_disconnect(base);
 
   return 0;
 }
@@ -1700,21 +1696,21 @@ int ublox_rover_config(ublox_t *rover) {
   /* Configure rover */
   const uint8_t layer = 1; /* RAM */
   int retval = 0;
-  retval += ubx_val_set(rover, layer, CFG_RATE_MEAS, 100, 2); /* 100ms = 10Hz */
-  retval += ubx_val_set(rover, layer, CFG_USBOUTPROT_NMEA, 0, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_MON_RF_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 1, 1);
-  retval += ubx_val_set(rover, layer, CFG_TMODE_MODE, 0, 1);
-  retval += ubx_val_set(rover, layer, CFG_NAVSPG_DYNMODEL, 6, 1);
+  retval += ubx_set(rover, layer, CFG_RATE_MEAS, 100, 2); /* 100ms = 10Hz */
+  retval += ubx_set(rover, layer, CFG_USBOUTPROT_NMEA, 0, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_CLOCK_USB, 0, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_DOP_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_EOE_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_HPPOSEECF_USB, 0, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_STATUS_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_SVIN_USB, 0, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_PVT_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_NAV_VELNED_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_MON_RF_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_MSGOUT_UBX_RXM_RTCM_USB, 1, 1);
+  retval += ubx_set(rover, layer, CFG_TMODE_MODE, 0, 1);
+  retval += ubx_set(rover, layer, CFG_NAVSPG_DYNMODEL, 6, 1);
   if (retval != 0) {
     return -1;
   }
@@ -1722,53 +1718,10 @@ int ublox_rover_config(ublox_t *rover) {
   return 0;
 }
 
-void ublox_rover_loop(ublox_t *rover) {
-  const int timeout = 1; /* 1ms */
-
-  /* Setup poll file descriptors */
-  struct pollfd fds[2];
-  /* -- UART */
-  fds[0].fd = rover->uart->connfd;
-  fds[0].events = POLLIN;
-  /* -- Server */
-  fds[1].fd = rover->sockfd;
-  fds[1].events = POLLIN;
-
-  /* Poll */
-  while (poll(fds, 2, timeout) >= 0) {
-    /* Read byte from UART and parse */
-    if (fds[0].revents & POLLIN) {
-      uint8_t data = 0;
-      if (uart_read(rover->uart, &data, 1) != 0) {
-        continue;
-      }
-      ublox_parse_ubx(rover, data);
-    }
-
-    /* Read byte from base station (assuming its the RTCM3) */
-    if (fds[1].fd != -1 && (fds[1].revents & POLLIN)) {
-      /* Read byte */
-      uint8_t data = 0;
-      if (read(rover->sockfd, &data, 1) != 1) {
-        LOG_ERROR("Failed to read RTCM3 byte from server!");
-        LOG_ERROR("Ignoring server for now!");
-        fds[1].fd = -1;
-      }
-
-      /* Transmit RTCM3 packet if its ready */
-      if (rtcm3_parser_update(&rover->rtcm3_parser, data)) {
-        const uint8_t *msg_data = rover->rtcm3_parser.buf_data;
-        const size_t msg_len = rover->rtcm3_parser.msg_len;
-        uart_write(rover->uart, msg_data, msg_len);
-        rtcm3_parser_reset(&rover->rtcm3_parser);
-      }
-    }
-  }
-}
-
 int ublox_rover_run(ublox_t *rover,
                     const char *base_ip,
-                    const int base_port) {
+                    const int base_port,
+                    int *loop) {
   /* Configure rover */
   if (ublox_rover_config(rover) != 0) {
     LOG_ERROR("Failed to configure Ublox into ROVER mode!");
@@ -1801,12 +1754,50 @@ int ublox_rover_run(ublox_t *rover,
     DEBUG("Connected to the server!");
   }
 
-  /* Obtain RTCM3 Messages from server and transmit them to ublox over UART */
-  ublox_rover_loop(rover);
+  /* Poll for UBX from UART and RTCM3 Messages from TCP connection */
+  /* -- Setup poll file descriptors */
+  struct pollfd fds[2];
+  /* -- UART */
+  fds[0].fd = rover->uart->connfd;
+  fds[0].events = POLLIN;
+  /* -- Server */
+  fds[1].fd = rover->sockfd;
+  fds[1].events = POLLIN;
+
+  /* Poll */
+  const int timeout = 1; /* 1ms */
+  while (poll(fds, 2, timeout) >= 0 && *loop == 1) {
+    /* Read byte from UART and parse */
+    if (fds[0].revents & POLLIN) {
+      uint8_t data = 0;
+      if (uart_read(rover->uart, &data, 1) != 0) {
+        continue;
+      }
+      ublox_parse_ubx(rover, data);
+    }
+
+    /* Read byte from TCP socket (assuming its the RTCM3) */
+    if (fds[1].fd != -1 && (fds[1].revents & POLLIN)) {
+      /* Read byte */
+      uint8_t data = 0;
+      if (read(rover->sockfd, &data, 1) != 1) {
+        LOG_ERROR("Failed to read RTCM3 byte from server!");
+        LOG_ERROR("Ignoring server for now!");
+        fds[1].fd = -1;
+      }
+
+      /* Transmit RTCM3 packet if its ready */
+      if (rtcm3_parser_update(&rover->rtcm3_parser, data)) {
+        const uint8_t *msg_data = rover->rtcm3_parser.buf_data;
+        const size_t msg_len = rover->rtcm3_parser.msg_len;
+        uart_write(rover->uart, msg_data, msg_len);
+        rtcm3_parser_reset(&rover->rtcm3_parser);
+      }
+    }
+  }
 
   /* Clean up */
-  close(rover->sockfd);
-  rover->sockfd = -1;
+  ublox_disconnect(rover);
 
   return 0;
 }
