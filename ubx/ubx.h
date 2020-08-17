@@ -15,21 +15,7 @@
 #include <sys/socket.h>
 #include <sys/poll.h>
 
-/**
- * UBX Class IDs
- * -------------
- * NAV 0x01 Navigation Results: Position, Speed, Time, Acceleration, Heading,
- * DOP, SVs used RXM 0x02 Receiver Manager: Satellite Status, RTC Status INF
- * 0x04 Information: Printf-Style Messages, with IDs such as Error, Warning,
- * Notice ACK 0x05 Ack/Nak: Acknowledge or Reject messages to UBX-CFG input
- * messages CFG 0x06 Configuration Input: Set Dynamic Model, Set DOP Mask, Set
- * Baud Rate, etc. UPD 0x09 Firmware Update: Memory/Flash erase/write, Reboot,
- * Flash identification, etc. MON 0x0A Monitoring: Communication Status, CPU
- * Load, Stack Usage, Task Status TIM 0x0D Timing: Time Pulse Output, Time Mark
- * Results MGA 0x13 Multiple GNSS Assistance: Assistance data for various GNSS
- * LOG 0x21 Logging: Log creation, deletion, info and retrieval
- * SEC 0x27 Security Feature
- */
+/* UBX Class IDs */
 #define UBX_NAV 0x01
 #define UBX_RXM 0x02
 #define UBX_INF 0x04
@@ -42,43 +28,16 @@
 #define UBX_LOG 0x21
 #define UBX_SEC 0x27
 
-/**
- * UBX Class CFG
- * -------------
- * ACK-ACK 0x05 0x01 2 Output Message Acknowledged
- * ACK-NAK 0x05 0x00 2 Output Message Not-Acknowledged
- */
+/* UBX Class CFG */
 #define UBX_ACK_ACK 0x01
 #define UBX_ACK_NAK 0x00
 
-/**
- * UBX Class CFG
- * -------------
- * CFG-VALDEL 0x06 0x8C 4 + 4*N Set Deletes values corresponding to...
- * CFG-VALGET 0x06 0x8B 4 + 4*N Poll Request Get Configuration Items
- * CFG-VALSET 0x06 0x8A 4 + 1*N Set Sets values corresponding to provided...
- */
+/* UBX Class CFG */
 #define UBX_CFG_VALDEL 0x8C
 #define UBX_CFG_VALGET 0x8B
 #define UBX_CFG_VALSET 0x8A
 
-/**
- * UBX Class MON Monitoring Messages
- * ---------------------------------
- * MON-COMMS 0x0A 0x36 8 + 40*nPorts Periodic/Polled Comm port information
- * MON-GNSS 0x0A 0x28 8 Polled Information message major GNSS...
- * MON-HW2 0x0A 0x0B 28 Periodic/Polled Extended Hardware Status
- * MON-HW3 0x0A 0x37 22 + 6*nPins Periodic/Polled HW I/O pin information
- * MON-HW 0x0A 0x09 60 Periodic/Polled Hardware Status
- * MON-IO 0x0A 0x02 0 + 20*N Periodic/Polled I/O Subsystem Status
- * MON-MSGPP 0x0A 0x06 120 Periodic/Polled Message Parse and Process Status
- * MON-PATCH 0x0A 0x27 4 + 16*nEntries Polled Output information about installed...
- * MON-RF 0x0A 0x38 4 + 24*nBlocks Periodic/Polled RF information
- * MON-RXBUF 0x0A 0x07 24 Periodic/Polled Receiver Buffer Status
- * MON-RXR 0x0A 0x21 1 Output Receiver Status Information
- * MON-TXBUF 0x0A 0x08 28 Periodic/Polled Transmitter Buffer Status
- * MON-VER 0x0A 0x04 40 + 30*N Polled Receiver/Software Version
- */
+/* UBX Class MON Monitoring Messages */
 #define UBX_MON_COMMS 0x36
 #define UBX_MON_GNSS 0x28
 #define UBX_MON_HW2 0x0B
@@ -93,34 +52,7 @@
 #define UBX_MON_TXBUF 0x08
 #define UBX_MON_VER 0x04
 
-/**
- * UBX Class NAV Navigation Results Messages
- * -----------------------------------------
- * NAV-CLOCK 0x01 0x22 20 Periodic/Polled Clock Solution
- * NAV-DOP 0x01 0x04 18 Periodic/Polled Dilution of precision
- * NAV-EOE 0x01 0x61 4 Periodic End Of Epoch
- * NAV-GEOFENCE 0x01 0x39 8 + 2*numFe... Periodic/Polled Geofencing status
- * NAV-HPPOSECEF 0x01 0x13 28 Periodic/Polled High Precision Position Solution
- * in ECEF NAV-HPPOSLLH 0x01 0x14 36 Periodic/Polled High Precision Geodetic
- * Position Solution NAV-ODO 0x01 0x09 20 Periodic/Polled Odometer Solution
- * NAV-ORB 0x01 0x34 8 + 6*numSv Periodic/Polled GNSS Orbit Database Info
- * NAV-POSECEF 0x01 0x01 20 Periodic/Polled Position Solution in ECEF
- * NAV-POSLLH 0x01 0x02 28 Periodic/Polled Geodetic Position Solution
- * NAV-PVT 0x01 0x07 92 Periodic/Polled Navigation Position Velocity Time...
- * NAV-RELPOSNED 0x01 0x3C 64 Periodic/Polled Relative Positioning Information
- * in... NAV-RESETODO 0x01 0x10 0 Command Reset odometer NAV-SAT 0x01 0x35 8 +
- * 12*numSvs Periodic/Polled Satellite Information NAV-SIG 0x01 0x43 8 +
- * 16*numSi... Periodic/Polled Signal Information NAV-STATUS 0x01 0x03 16
- * Periodic/Polled Receiver Navigation Status NAV-SVIN 0x01 0x3B 40
- * Periodic/Polled Survey-in data NAV-TIMEBDS 0x01 0x24 20 Periodic/Polled BDS
- * Time Solution NAV-TIMEGAL 0x01 0x25 20 Periodic/Polled Galileo Time Solution
- * NAV-TIMEGLO 0x01 0x23 20 Periodic/Polled GLO Time Solution
- * NAV-TIMEGPS 0x01 0x20 16 Periodic/Polled GPS Time Solution
- * NAV-TIMELS 0x01 0x26 24 Periodic/Polled Leap second event information
- * NAV-TIMEUTC 0x01 0x21 20 Periodic/Polled UTC Time Solution
- * NAV-VELECEF 0x01 0x11 20 Periodic/Polled Velocity Solution in ECEF
- * NAV-VELNED 0x01 0x12 36 Periodic/Polled Velocity Solution in NED
- */
+/* UBX Class NAV Navigation Results Messages */
 #define UBX_NAV_CLOCK 0x22
 #define UBX_NAV_DOP 0x04
 #define UBX_NAV_EOE 0x61
@@ -147,17 +79,7 @@
 #define UBX_NAV_VELECEF 0x11
 #define UBX_NAV_VELNED 0x12
 
-/**
- * UBX Class RXM Receiver Manager Messages
- * ---------------------------------------
- * RXM-MEASX 0x02 0x14 44 + 24*num... Periodic/Polled Satellite Measurements for
- * RRLP RXM-PMREQ 0x02 0x41 8 Command Requests a Power Management task RXM-PMREQ
- * 0x02 0x41 16 Command Requests a Power Management task RXM-RAWX 0x02 0x15 16 +
- * 32*num... Periodic/Polled Multi-GNSS Raw Measurement Data RXM-RLM 0x02 0x59
- * 16 Output Galileo SAR Short-RLM report RXM-RLM 0x02 0x59 28 Output Galileo
- * SAR Long-RLM report RXM-RTCM 0x02 0x32 8 Output RTCM input status RXM-SFRBX
- * 0x02 0x13 8 + 4*numW... Output
- */
+/* UBX Class RXM Receiver Manager Messages */
 #define UBX_RXM_MEASX 0x14
 #define UBX_RXM_PMREQ 0x41
 #define UBX_RXM_RAWX 0x15
@@ -165,6 +87,11 @@
 #define UBX_RXM_RTCM 0x32
 #define UBX_RXM_SFRBX 0x13
 
+/**
+ * Configuration Aliases (Incomplete - Refer to manual for more info)
+ * These configuration are just the ones I found useful to setup GPS mode and
+ * RTK-GPS mode on the UBlox ZED-F9P. It may not work with all GPS sensors.
+ */
 #define CFG_SIGNAL_GPS_ENA 0x1031001f
 #define CFG_SIGNAL_GPS_L1CA_ENA 0x10310001
 #define CFG_SIGNAL_QZSS_ENA 0x10310024
@@ -948,9 +875,7 @@ void print_ubx_rxm_rtcm(const ubx_rxm_rtcm_t *msg) {
  * UBX Stream Parser
  ****************************************************************************/
 
-/**
- * UBX Stream Parser States
- */
+/* UBX Stream Parser States */
 #define SYNC_1 0
 #define SYNC_2 1
 #define MSG_CLASS 2
@@ -961,9 +886,7 @@ void print_ubx_rxm_rtcm(const ubx_rxm_rtcm_t *msg) {
 #define CK_A 7
 #define CK_B 8
 
-/**
- * UBX Stream Parser
- */
+/* UBX Stream Parser */
 typedef struct ubx_parser_t {
   uint8_t state;
   uint8_t buf_data[9046];
@@ -1038,9 +961,7 @@ int ubx_parser_update(ubx_parser_t *parser, uint8_t data) {
  * RTCM3 Stream Parser
  ****************************************************************************/
 
-/**
- * RTCM3 Stream Parser
- */
+/* RTCM3 Stream Parser */
 typedef struct rtcm3_parser_t {
   uint8_t buf_data[9046];
   size_t buf_pos;
@@ -1125,9 +1046,7 @@ typedef struct ublox_t ublox_t;
 typedef void (*ubx_msg_callback)(ublox_t *ublox);
 typedef void (*rtcm3_msg_callback)(ublox_t *ublox);
 
-/**
- * UBlox
- */
+/* UBlox */
 typedef struct ublox_t {
   int state;
   uint8_t ok;
