@@ -1,6 +1,6 @@
 # ubx
-A C header only library to interface with the u-blox GPS modules **Only tested
-with the UBlox ZED-F9P**. This library contrains:
+A C header only library to interface with the u-blox GPS modules (**Only tested
+with the UBlox ZED-F9P**). This library contrains:
 
 - UBX Parser
 - RTCM3 Parser
