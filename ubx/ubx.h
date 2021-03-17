@@ -1070,7 +1070,7 @@ int ublox_init(ublox_t *ublox, uart_t *uart) {
   /* UART */
   if (uart->connected != 1) {
     if (uart_connect(uart, ublox->uart->port) != 0) {
-			ublox->ok = -1;
+      ublox->ok = -1;
       return -1;
     }
   }
@@ -1090,11 +1090,11 @@ int ublox_init(ublox_t *ublox, uart_t *uart) {
   ubx_parser_init(&ublox->ubx_parser);
   rtcm3_parser_init(&ublox->rtcm3_parser);
 
-	/* Callbacks */
+  /* Callbacks */
   ublox->ubx_cb = NULL;
   ublox->rtcm3_cb = NULL;
 
-	return 0;
+  return 0;
 }
 
 void ublox_disconnect(ublox_t *ublox) {
@@ -1102,7 +1102,7 @@ void ublox_disconnect(ublox_t *ublox) {
   if (ublox->uart->connected) {
     uart_disconnect(ublox->uart);
   }
-	ublox->ok = -1;
+  ublox->ok = -1;
 
   /* Connections */
   for (size_t i = 0; i < ublox->nb_conns; i++) {
@@ -1119,8 +1119,8 @@ void ublox_disconnect(ublox_t *ublox) {
 }
 
 int ublox_reset(ublox_t *ublox) {
-	ublox_disconnect(ublox);
-	return ublox_init(ublox, ublox->uart);
+  ublox_disconnect(ublox);
+  return ublox_init(ublox, ublox->uart);
 }
 
 int ubx_write(const ublox_t *ublox,

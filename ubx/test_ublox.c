@@ -161,64 +161,64 @@ int test_ubx_parser_update() {
 
 int test_ublox_init() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup UBlox */
   ublox_t ublox;
   if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to setup ublox!");
-		return -1;
+    return -1;
   }
 
-	/* Clean up */
-	ublox_disconnect(&ublox);
-	sleep(2);
+  /* Clean up */
+  ublox_disconnect(&ublox);
+  sleep(2);
 
-	return 0;
+  return 0;
 }
 
 int test_ublox_version() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup UBlox */
   ublox_t ublox;
   if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to setup ublox!");
-		return -1;
+    return -1;
   }
 
   /* Print UBlox version */
   ublox_version(&ublox);
 
-	/* Clean up */
-	ublox_disconnect(&ublox);
-	sleep(1);
+  /* Clean up */
+  ublox_disconnect(&ublox);
+  sleep(1);
 
   return 0;
 }
 
 int test_ubx_set_and_get() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup UBlox */
   ublox_t ublox;
   if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to setup ublox!");
-		return -1;
+    return -1;
   }
 
   uint32_t key = CFG_MSGOUT_RTCM_3X_TYPE1005_USB;
@@ -226,32 +226,32 @@ int test_ubx_set_and_get() {
   uint8_t val_size = 1;
   ubx_set(&ublox, 1, key, val, val_size);
 
-	ublox_reset(&ublox);
+  ublox_reset(&ublox);
 
   uint32_t value = 0;
   ubx_get(&ublox, 0, key, &value);
   MU_CHECK(value == val);
 
-	/* Clean up */
-	ublox_disconnect(&ublox);
-	sleep(1);
+  /* Clean up */
+  ublox_disconnect(&ublox);
+  sleep(1);
 
   return 0;
 }
 
 int test_ublox_parse_rtcm3() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup UBlox */
   ublox_t ublox;
   if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to setup ublox!");
-		return -1;
+    return -1;
   }
 
   // clang-format off
@@ -319,30 +319,30 @@ int test_ublox_parse_rtcm3() {
     }
   }
 
-	/* Clean up */
-	ublox_disconnect(&ublox);
-	sleep(1);
+  /* Clean up */
+  ublox_disconnect(&ublox);
+  sleep(1);
 
   return 0;
 }
 
 int test_ublox_run() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup ublox */
   ublox_t ublox;
   if (ublox_init(&ublox, &uart) != 0) {
     LOG_ERROR("Failed to initialize ublox!");
-		return -1;
+    return -1;
   }
 
-	/* Configure and run Ublox in GPS mode */
-	loop = 1;
+  /* Configure and run Ublox in GPS mode */
+  loop = 1;
   ublox_run(&ublox, &loop);
 
   return 0;
@@ -350,21 +350,21 @@ int test_ublox_run() {
 
 int test_ublox_base() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup UBlox */
   ublox_t base;
   if (ublox_init(&base, &uart) != 0) {
     LOG_ERROR("Failed to initialize ublox!");
-		return -1;
+    return -1;
   }
 
-	/* Run base station */
-	loop = 1;
+  /* Run base station */
+  loop = 1;
   ublox_base_run(&base, 1234, &loop);
 
   return 0;
@@ -372,20 +372,20 @@ int test_ublox_base() {
 
 int test_ublox_rover() {
   /* Setup UART connection to UBlox */
-	uart_t uart;
-	if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
+  uart_t uart;
+  if (uart_connect(&uart, "/dev/ttyACM0") != 0) {
     LOG_ERROR("Failed to connect to ublox!");
-		return -1;
-	}
+    return -1;
+  }
 
   /* Setup rover */
   ublox_t rover;
   if (ublox_init(&rover, &uart) != 0) {
     LOG_ERROR("Failed to initialize ublox!");
-		return -1;
+    return -1;
   }
 
-	/* Run rover */
+  /* Run rover */
   char *ip = "127.0.0.1";
   int port = 1234;
   loop = 1;
@@ -408,13 +408,13 @@ void test_suite() {
   MU_ADD_TEST(test_ubx_parser_reset);
   MU_ADD_TEST(test_ubx_parser_update);
 
-	MU_ADD_TEST(test_ublox_init);
-	MU_ADD_TEST(test_ublox_version);
-	MU_ADD_TEST(test_ubx_set_and_get);
-	MU_ADD_TEST(test_ublox_parse_rtcm3);
-	MU_ADD_TEST(test_ublox_run);
-	/* MU_ADD_TEST(test_ublox_base); */
-	/* MU_ADD_TEST(test_ublox_rover); */
+  MU_ADD_TEST(test_ublox_init);
+  MU_ADD_TEST(test_ublox_version);
+  MU_ADD_TEST(test_ubx_set_and_get);
+  MU_ADD_TEST(test_ublox_parse_rtcm3);
+  MU_ADD_TEST(test_ublox_run);
+  /* MU_ADD_TEST(test_ublox_base); */
+  /* MU_ADD_TEST(test_ublox_rover); */
 }
 
 MU_RUN_TESTS(test_suite);
